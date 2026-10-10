@@ -1,0 +1,38 @@
+<section class="chart-card" dir="rtl">
+  <div class="chart-heading">
+    <h2>تغيّر أسعار الذهب</h2>
+    <p>تابعي حركة سعر الغرام خلال الفترة التاريخية المتاحة</p>
+  </div>
+
+  <div class="karat-selector">
+    <label for="karat">اختاري عيار الذهب:</label>
+
+    <select
+      id="karat"
+      [value]="selectedKarat"
+      (change)="changeKarat($any($event.target).value)"
+    >
+      <option value="24">عيار 24</option>
+      <option value="22">عيار 22</option>
+      <option value="21">عيار 21</option>
+      <option value="18">عيار 18</option>
+    </select>
+  </div>
+
+  @if (history.length > 0) {
+    <div class="chart-container">
+      <canvas #goldChart></canvas>
+    </div>
+  } @else {
+    <div class="chart-empty">
+      لا توجد بيانات تاريخية لعرض الرسم البياني حاليًا.
+    </div>
+  }
+
+  <p class="chart-note">
+    الأسعار مبنية على البيانات التاريخية المتاحة، وقد لا تشمل
+    المصنعية أو الضرائب أو هامش البيع.
+  </p>
+</section>
+
+

@@ -1,0 +1,44 @@
+<section class="calculator" dir="rtl">
+  <h2>حاسبة الذهب</h2>
+  <p class="subtitle">
+    احسبي القيمة التقديرية لذهبك بالريال العُماني
+  </p>
+
+  <div class="form-group">
+    <label for="karat">عيار الذهب</label>
+
+    <select id="karat" [(ngModel)]="karat">
+      <option value="24">عيار 24</option>
+      <option value="22">عيار 22</option>
+      <option value="21">عيار 21</option>
+      <option value="18">عيار 18</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="weight">الوزن بالغرام</label>
+
+    <input
+      id="weight"
+      type="number"
+      [(ngModel)]="weight"
+      min="0"
+      step="0.1"
+    />
+  </div>
+
+  <div class="price-info">
+    <span>سعر الغرام</span>
+    <strong>{{ pricePerGram | number:'1.3-3' }} ر.ع</strong>
+  </div>
+
+  <div class="result">
+    <p>القيمة التقديرية</p>
+    <h3>{{ totalPrice | number:'1.3-3' }} ر.ع</h3>
+  </div>
+
+  <p class="note">
+    الحساب تقديري، ولا يشمل المصنعية أو الضرائب أو رسوم البيع والشراء.
+  </p>
+</section>
+

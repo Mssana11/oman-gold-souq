@@ -1,0 +1,16 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+/* تنسيقات أساسية للبطاقة */
+:host article {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* تحسين عرض الأرقام */
+:host article .text-3xl,
+:host article .sm\:text-4xl {
+  font-variant-numeric: tabular-nums;
+}

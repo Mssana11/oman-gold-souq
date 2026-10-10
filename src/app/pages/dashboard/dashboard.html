@@ -1,0 +1,98 @@
+
+<div class="price-control" dir="rtl">
+  <label for="price24">سعر غرام الذهب عيار 24 (ر.ع)</label>
+
+  <input
+    id="price24"
+    type="number"
+    [value]="price24"
+    (input)="price24 = +$any($event.target).value"
+    step="0.001"
+    min="0"
+  />
+</div>
+
+<main class="dashboard" dir="rtl">
+  <section class="welcome">
+    <div>
+      <h2>مرحبًا بك في لوحة الذهب</h2>
+      <p>تابعي أسعار الذهب في سلطنة عُمان بسهولة.</p>
+    </div>
+    
+    <span class="currency-badge">
+      العملة: الريال العُماني
+    </span>
+  </section>
+
+  <section class="section-heading">
+    <h2>أسعار الذهب حسب العيار</h2>
+    <p>سعر الغرام الواحد</p>
+  </section>
+
+  <button
+    type="button"
+    (click)="refreshCurrentPriceManually()"
+    [disabled]="isRefreshing">
+    {{ isRefreshing ? 'جارٍ التحديث...' : 'تحديث سعر الذهب' }}
+  </button>
+
+  <p *ngIf="refreshMessage" aria-live="polite">
+    {{ refreshMessage }}
+  </p>
+<div class="price-update">
+  <p>
+    آخر تحديث:  
+    <strong>
+      {{ lastUpdated ? (lastUpdated | date:'dd/MM/yyyy hh:mm a') : 'لا يوجد تحديث مسجل' }}
+    </strong>
+  </p>
+
+  
+</div>
+  <section class="gold-grid">
+    @for (gold of goldPrices; track gold.karat) {
+      <app-gold-card
+        [karat]="gold.karat"
+        [price]="gold.price"
+        [change]="gold.change">
+      </app-gold-card>
+    }
+  </section>
+
+  @if (historyLoading) {
+    <p class="history-status">جارٍ تحميل البيانات التاريخية...</p>
+  }
+
+  @if (historyError) {
+    <p class="history-error">{{ historyError }}</p>
+  }
+
+  @if (history.length > 0) {
+    <app-gold-chart
+      [history]="history">
+    </app-gold-chart>
+  }
+  <app-gold-history
+  [history]="history"
+  [loading]="historyLoading"
+  [errorMessage]="historyError">
+</app-gold-history>
+
+  <app-gold-calculator
+  [goldPrices]="goldPrices">
+</app-gold-calculator>
+  
+
+  <section class="notice">
+    <strong>تنبيه:</strong>
+    الأسعار التاريخية تقديرية بحسب البيانات المتاحة، وأسعار العيارات
+    محسوبة من سعر عيار 24 ولا تشمل المصنعية أو الضرائب.
+  </section>
+
+  
+<div class="site-footer">
+  <p>جميع الحقوق محفوظة &copy;2026</p>
+</div>
+
+ 
+</main>

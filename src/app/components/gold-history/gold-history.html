@@ -1,0 +1,69 @@
+<section class="history-card" dir="rtl">
+  <div class="history-heading">
+    <div>
+      <h2>سجل أسعار الذهب</h2>
+      <p>الأسعار التاريخية المتاحة خلال آخر 30 يومًا</p>
+    </div>
+
+    <span class="history-count">
+      {{ history.length }} يومًا
+    </span>
+  </div>
+
+  @if (loading) {
+    <div class="history-status">
+      جارٍ تحميل الأسعار التاريخية...
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="history-error">
+      {{ errorMessage }}
+    </div>
+  }
+
+  @if (!loading && !errorMessage && history.length > 0) {
+    @if (history.length < 30) {
+      <div class="history-notice">
+        تتوفر بيانات {{ history.length }} يومًا فقط من أصل 30 يومًا.
+        قد لا تتوفر بيانات تاريخية لبعض التواريخ.
+      </div>
+    } @else {
+      <div class="history-success">
+        تم تحميل بيانات 30 يومًا.
+      </div>
+    }
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>التاريخ</th>
+            <th>عيار 24</th>
+            <th>عيار 22</th>
+            <th>عيار 21</th>
+            <th>عيار 18</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (row of displayHistory; track row.date) {
+            <tr>
+              <td>{{ row.date }}</td>
+              <td>{{ row.price24 | number:'1.3-3' }}</td>
+              <td>{{ row.price22 | number:'1.3-3' }}</td>
+              <td>{{ row.price21 | number:'1.3-3' }}</td>
+              <td>{{ row.price18 | number:'1.3-3' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <p class="currency-note">
+      جميع الأسعار بالريال العُماني لكل غرام.
+      أسعار العيارات 22 و21 و18 محسوبة بحسب نسبة نقاء الذهب،
+      ولا تشمل المصنعية أو الضرائب أو هامش البيع.
+    </p>
+  }
+</section>

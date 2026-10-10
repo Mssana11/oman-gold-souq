@@ -1,0 +1,82 @@
+.calculator {
+  max-width: 650px;
+  margin: 28px auto;
+  padding: 26px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+}
+
+.calculator h2 {
+  margin: 0 0 8px;
+  color: #172554;
+  font-size: 26px;
+}
+
+.subtitle {
+  color: #64748b;
+  margin-bottom: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  color: #334155;
+  font-weight: 700;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  font-size: 16px;
+  background: #fff;
+}
+
+.price-info {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0;
+  color: #334155;
+}
+
+.result {
+  padding: 20px;
+  text-align: center;
+  border-radius: 12px;
+  background: #172554;
+  color: #ffffff;
+}
+
+.result p {
+  margin: 0 0 8px;
+}
+
+.result h3 {
+  margin: 0;
+  color: #f2cc60;
+  font-size: 30px;
+}
+
+.note {
+  margin: 18px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+@media (max-width: 600px) {
+  .calculator {
+    padding: 18px;
+  }
+}
