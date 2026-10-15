@@ -39,16 +39,16 @@
   <p *ngIf="refreshMessage" aria-live="polite">
     {{ refreshMessage }}
   </p>
-<div class="price-update">
-  <p>
+<div class="lastUpdated">
+  <p *ngIf="lastUpdated">
     آخر تحديث:  
     <strong>
       {{ lastUpdated ? (lastUpdated | date:'dd/MM/yyyy hh:mm a') : 'لا يوجد تحديث مسجل' }}
     </strong>
   </p>
-
-  
 </div>
+  
+
   <section class="gold-grid">
     @for (gold of goldPrices; track gold.karat) {
       <app-gold-card

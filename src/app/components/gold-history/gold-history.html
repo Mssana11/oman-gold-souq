@@ -6,7 +6,7 @@
     </div>
 
     <span class="history-count">
-      {{ history.length }} يومًا
+      {{ history.length }} من 30 يومًا متوفر
     </span>
   </div>
 
@@ -22,7 +22,7 @@
     </div>
   }
 
-  @if (!loading && !errorMessage && history.length > 0) {
+  @if (!loading) {
     @if (history.length < 30) {
       <div class="history-notice">
         تتوفر بيانات {{ history.length }} يومًا فقط من أصل 30 يومًا.
@@ -50,10 +50,37 @@
           @for (row of displayHistory; track row.date) {
             <tr>
               <td>{{ row.date }}</td>
-              <td>{{ row.price24 | number:'1.3-3' }}</td>
-              <td>{{ row.price22 | number:'1.3-3' }}</td>
-              <td>{{ row.price21 | number:'1.3-3' }}</td>
-              <td>{{ row.price18 | number:'1.3-3' }}</td>
+              <td>
+  @if (row.price24 !== null) {
+    {{ row.price24 | number:'1.3-3' }}
+  } @else {
+    —
+  }
+</td>
+
+<td>
+  @if (row.price22 !== null) {
+    {{ row.price22 | number:'1.3-3' }}
+  } @else {
+    —
+  }
+</td>
+
+<td>
+  @if (row.price21 !== null) {
+    {{ row.price21 | number:'1.3-3' }}
+  } @else {
+    —
+  }
+</td>
+
+<td>
+  @if (row.price18 !== null) {
+    {{ row.price18 | number:'1.3-3' }}
+  } @else {
+    —
+  }
+</td>
             </tr>
           }
         </tbody>

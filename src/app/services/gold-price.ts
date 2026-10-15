@@ -5,7 +5,10 @@ import {
   forkJoin,
   map,
   catchError,
-  of
+  of,
+  from,
+  mergeMap,
+  toArray
 } from 'rxjs';
 
 import { GOLD_API_KEY, GOLD_API_URL } from './gold-api.config';
@@ -76,11 +79,14 @@ export class GoldPriceService {
       );
   }
 
-  // جلب أسعار الذهب التاريخية لآخر 30 يومًا
+   // جلب التواريخ المفقودة على دفعات صغيرة لتوفير رصيد API
   getHistoricalPrices(
-    days = 30
+    days = 30,
+    existingDates: string[] = [],
+    maxRequests = 3
   ): Observable<GoldHistoryItem[]> {
-    const requests: Observable<GoldHistoryItem | null>[] = [];
+    const existing = new Set(existingDates);
+    const missingDates: string[] = [];
 
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date();
@@ -92,7 +98,18 @@ export class GoldPriceService {
         `${String(date.getMonth() + 1).padStart(2, '0')}` +
         `${String(date.getDate()).padStart(2, '0')}`;
 
-      requests.push(
+      if (!existing.has(dateKey)) {
+        missingDates.push(dateKey);
+      }
+    }
+
+    const datesToFetch = missingDates.slice(
+      0,
+      Math.max(0, Math.floor(maxRequests))
+    );
+
+    const requests: Observable<GoldHistoryItem | null>[] =
+      datesToFetch.map((dateKey) =>
         this.http
           .get<GoldApiResponse>(
             `${GOLD_API_URL}/XAU/OMR/${dateKey}`,
@@ -122,13 +139,22 @@ export class GoldPriceService {
                 price18: price24 * 18 / 24
               };
             }),
-            catchError(() => of(null))
+            catchError((error) => {
+              console.warn(
+                'فشل طلب السجل التاريخي:',
+                dateKey,
+                error.status,
+                error.message
+              );
+              return of(null);
+            })
           )
       );
-    }
 
-    return forkJoin(requests).pipe(
-      map((results) =>
+    return from(requests).pipe(
+      mergeMap((request) => request, 2),
+      toArray(),
+      map((results): GoldHistoryItem[] =>
         results
           .filter(
             (item): item is GoldHistoryItem => item !== null
