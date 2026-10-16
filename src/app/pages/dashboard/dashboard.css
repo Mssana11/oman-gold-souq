@@ -174,4 +174,15 @@
     width: 100%;
     box-sizing: border-box;
   }
+  .refresh-message {
+  margin: 12px 0 20px;
+  padding: 12px 16px;
+  border: 1px solid #e5b85c;
+  border-radius: 10px;
+  background: #fff8e8;
+  color: #795516;
+  font-size: 14px;
+  line-height: 1.8;
+  text-align: right;
+}
 }

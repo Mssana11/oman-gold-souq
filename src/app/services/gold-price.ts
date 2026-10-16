@@ -6,9 +6,10 @@ import {
   map,
   catchError,
   of,
-  from,
   mergeMap,
-  toArray
+  toArray,
+  from,
+  throwError
 } from 'rxjs';
 
 import { GOLD_API_KEY, GOLD_API_URL } from './gold-api.config';
@@ -49,35 +50,45 @@ export class GoldPriceService {
 
   // جلب أسعار الذهب الحالية
   getGoldPrices(): Observable<GoldPrice[]> {
-    return this.http
-      .get<GoldApiResponse>(
-        `${GOLD_API_URL}/price/XAU/OMR`,
-        { headers: this.headers }
-      )
-      .pipe(
-        map((response) => {
-          const gramPrice = Number(response['price_gram_24k']);
-          const ouncePrice = Number(response['price']);
+  return this.http
+    .get<GoldApiResponse>(
+      `${GOLD_API_URL}/price/XAU/OMR`,
+      { headers: this.headers }
+    )
+    .pipe(
+      map((response) => {
+        const gramPrice = Number(response['price_gram_24k']);
+        const ouncePrice = Number(response['price']);
 
-          const price24 =
-            Number.isFinite(gramPrice) && gramPrice > 0
-              ? gramPrice
-              : Number.isFinite(ouncePrice) && ouncePrice > 0
-                ? ouncePrice / 31.1034768
-                : 0;
+        const price24 =
+          Number.isFinite(gramPrice) && gramPrice > 0
+            ? gramPrice
+            : Number.isFinite(ouncePrice) && ouncePrice > 0
+              ? ouncePrice / 31.1034768
+              : 0;
 
-          if (price24 <= 0) {
-            throw new Error('لم يصل سعر صالح للذهب من GoldAPI.');
-          }
+        if (price24 <= 0) {
+          throw new Error('لم يصل سعر صالح للذهب من GoldAPI.');
+        }
 
-          return [24, 22, 21, 18].map((karat) => ({
-            karat: String(karat),
-            price: price24 * karat / 24,
-            change: 0
-          }));
-        })
-      );
-  }
+        return [24, 22, 21, 18].map((karat) => ({
+          karat: String(karat),
+          price: price24 * karat / 24,
+          change: 0
+        }));
+      }),
+      catchError((error) => {
+        console.error('تفاصيل خطأ GoldAPI:', {
+          status: error.status,
+          statusText: error.statusText,
+          message: error.message,
+          error: error.error
+        });
+
+        return throwError(() => error);
+      })
+    );
+}
 
    // جلب التواريخ المفقودة على دفعات صغيرة لتوفير رصيد API
   getHistoricalPrices(

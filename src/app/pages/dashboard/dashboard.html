@@ -28,26 +28,18 @@
     <h2>أسعار الذهب حسب العيار</h2>
     <p>سعر الغرام الواحد</p>
   </section>
-
-  <button
+   <button
     type="button"
     (click)="refreshCurrentPriceManually()"
     [disabled]="isRefreshing">
     {{ isRefreshing ? 'جارٍ التحديث...' : 'تحديث سعر الذهب' }}
   </button>
 
-  <p *ngIf="refreshMessage" aria-live="polite">
-    {{ refreshMessage }}
-  </p>
-<div class="lastUpdated">
-  <p *ngIf="lastUpdated">
-    آخر تحديث:  
-    <strong>
-      {{ lastUpdated ? (lastUpdated | date:'dd/MM/yyyy hh:mm a') : 'لا يوجد تحديث مسجل' }}
-    </strong>
-  </p>
+  <div
+  style="background: #fff3cd; color: #664d03; padding: 16px; margin: 16px 0; border: 1px solid #ffecb5; border-radius: 8px;"
+  dir="rtl">
+  اختبار: هل تظهر هذه الرسالة في لوحة الذهب؟
 </div>
-  
 
   <section class="gold-grid">
     @for (gold of goldPrices; track gold.karat) {
@@ -58,7 +50,6 @@
       </app-gold-card>
     }
   </section>
-
   @if (historyLoading) {
     <p class="history-status">جارٍ تحميل البيانات التاريخية...</p>
   }

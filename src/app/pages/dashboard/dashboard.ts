@@ -37,13 +37,16 @@ export class Dashboard implements OnInit {
   historyLoading = true;
   historyError = '';
 lastUpdated: Date | null = null;
+currentPriceUpdatedAt: Date | null = null;
+
 private hasCurrentPrice = false;
   constructor(
     private goldPriceService: GoldPriceService
   ) {}
 
   isRefreshing = false;
-refreshMessage = '';
+refreshMessage =
+  'التحديث متوقف مؤقتًا بسبب استنفاد الحصة الشهرية لـ GoldAPI. الأسعار المعروضة قد لا تكون أسعار اليوم.';
 
 private readonly currentCacheKey = 'oman-gold-current-v1';
 private readonly attemptKey = 'oman-gold-current-last-attempt-v1';
@@ -122,15 +125,21 @@ refreshCurrentPriceManually(): void {
       },
 
       error: (error) => {
-        console.error('تعذر تحديث السعر:', error);
+  console.error('تعذر جلب السعر الحالي:', error);
 
-        this.refreshMessage =
-          error.name === 'TimeoutError'
-            ? 'انتهت مهلة الاتصال. حاولي لاحقًا.'
-            : 'تعذر التحديث حاليًا. احتفظنا بالأسعار المعروضة إن أمكن.';
+  if (error.status === 403) {
+    this.refreshMessage =
+      'تعذر تحديث الأسعار: تم رفض الطلب أو استُنفدت حصة GoldAPI الشهرية. نعرض البيانات المتاحة فقط.';
+  } else if (error.name === 'TimeoutError') {
+    this.refreshMessage =
+      'انتهت مهلة الاتصال. نعرض البيانات المتاحة حاليًا.';
+  } else {
+    this.refreshMessage =
+      'تعذر تحديث الأسعار حاليًا. نعرض البيانات المتاحة فقط.';
+  }
 
-        this.isRefreshing = false;
-      }
+  this.isRefreshing = false;
+}
     });
 }
 
@@ -232,10 +241,10 @@ private loadHistoricalPrices(): void {
     .sort((a, b) => a.date.localeCompare(b.date));
     
   // استعادة البيانات المحفوظة
-  if (this.history.length === 0 && savedHistory.length > 0) {
+  {
     this.history = savedHistory;
-    console.log('عدد السجلات المحفوظة:', savedHistory.length);
-console.log('عدد السجلات المعروضة:', this.history.length);
+    console.log('عدد السجلات المتاحة للعرض:', this.history.length);
+console.log('حالة التحميل قبل بدء الطلب:', this.historyLoading);
   }
 
   // عدم إعادة الطلب إذا كان السجل حديثًا
@@ -366,8 +375,8 @@ console.log('عدد النتائج الجديدة:', items.length);
   // تحديث السعر الحالي بعد مرور 24 ساعة
 const updateInterval = 24 * 60 * 60 * 1000;
 
-// منع تكرار المحاولة الفاشلة خلال 30 دقيقة
-const attemptCooldown = 30 * 60 * 1000;
+// منع تكرار المحاولة الفاشلة خلال 24 دقيقة
+const attemptCooldown = 24 * 60 * 60 * 1000;
 
     // 1. قراءة السجل التاريخي ودمجه مع البيانات الأولية
   let savedHistory: GoldHistoryItem[] = [];
@@ -435,7 +444,7 @@ const attemptCooldown = 30 * 60 * 1000;
         validPrices
       ) {
         currentSavedAt = saved.savedAt;
-        this.lastUpdated = new Date(saved.savedAt);
+        this.currentPriceUpdatedAt = new Date(saved.savedAt);
         this.hasCurrentPrice = true;
         this.applyCurrentPrices(saved.data);
       }
@@ -514,7 +523,7 @@ this.goldPriceService
       this.applyCurrentPrices(prices);
 
       const savedAt = Date.now();
-      this.lastUpdated = new Date(savedAt);
+      this.currentPriceUpdatedAt = new Date(savedAt);
       this.hasCurrentPrice = true;
 
       try {
