@@ -119,27 +119,35 @@ refreshCurrentPriceManually(): void {
           );
         } catch {}
 
-        this.lastUpdated = new Date(savedAt);
-        this.refreshMessage = 'تم تحديث السعر بنجاح.';
-        this.isRefreshing = false;
+       this.lastUpdated = new Date(savedAt);
+this.currentPriceUpdatedAt = new Date(savedAt);
+
+this.refreshMessage =
+  'تم جلب البيانات وحفظها في هذا الوقت، لكن تاريخ السعر الفعلي غير مؤكد.';
+
+this.isRefreshing = false;
       },
 
       error: (error) => {
   console.error('تعذر جلب السعر الحالي:', error);
 
-  if (error.status === 403) {
+  if (error.status === 429) {
     this.refreshMessage =
-      'تعذر تحديث الأسعار: تم رفض الطلب أو استُنفدت حصة GoldAPI الشهرية. نعرض البيانات المتاحة فقط.';
+      'توقّف تحديث الأسعار بسبب بلوغ حد الطلبات المسموح به في GoldAPI. نعرض البيانات المحفوظة، وقد لا تكون أسعار اليوم.';
+  } else if (error.status === 403) {
+    this.refreshMessage =
+      'رفضت GoldAPI الطلب أو انتهت صلاحية الوصول. نعرض البيانات المحفوظة، وقد لا تكون أسعار اليوم.';
   } else if (error.name === 'TimeoutError') {
     this.refreshMessage =
-      'انتهت مهلة الاتصال. نعرض البيانات المتاحة حاليًا.';
+      'انتهت مهلة الاتصال. نعرض البيانات المحفوظة، وقد لا تكون أسعار اليوم.';
   } else {
     this.refreshMessage =
-      'تعذر تحديث الأسعار حاليًا. نعرض البيانات المتاحة فقط.';
+      'تعذر تحديث الأسعار حاليًا. نعرض البيانات المحفوظة، وقد لا تكون أسعار اليوم.';
   }
 
   this.isRefreshing = false;
 }
+
     });
 }
 

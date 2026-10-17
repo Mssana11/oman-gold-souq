@@ -43,6 +43,19 @@
   {{ refreshMessage }}
 </div>
 
+<div class="lastUpdated" dir="rtl">
+  <p *ngIf="currentPriceUpdatedAt; else noCurrentPriceTime">
+    وقت حفظ السعر الحالي:
+    <strong>
+      {{ currentPriceUpdatedAt | date:'dd/MM/yyyy hh:mm a' }}
+    </strong>
+  </p>
+
+  <ng-template #noCurrentPriceTime>
+    <p>لا يوجد وقت حفظ مسجل للسعر الحالي.</p>
+  </ng-template>
+</div>
+
 
   <section class="gold-grid">
     @for (gold of goldPrices; track gold.karat) {
