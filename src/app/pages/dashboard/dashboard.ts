@@ -54,6 +54,29 @@ private readonly attemptKey = 'oman-gold-current-last-attempt-v1';
 private readonly refreshCooldown = 30 * 60 * 1000;
 
 refreshCurrentPriceManually(): void {
+   // عدم الاتصال بـ GoldAPI عند استخدام السعر اليدوي
+  try {
+    const rawManual = localStorage.getItem(
+      'oman-gold-manual-price-v1'
+    );
+
+    if (rawManual) {
+      const manual = JSON.parse(rawManual);
+
+      if (
+        manual.source === 'manual' &&
+        Number.isFinite(Number(manual.price24)) &&
+        Number(manual.price24) > 0 &&
+        Number(manual.price24) <= 10000
+      ) {
+        this.refreshMessage =
+          'أنتِ تستخدمين السعر اليدوي المحفوظ. لم يتم الاتصال بـ GoldAPI.';
+        return;
+      }
+    }
+  } catch {
+    // متابعة التحقق من آلية التحديث المعتادة عند تعذر قراءة التخزين
+  }
   if (this.isRefreshing) return;
 
   let lastAttempt = 0;
@@ -150,7 +173,40 @@ this.isRefreshing = false;
 
     });
 }
-
+saveManualGoldPrice(): void {
+  const price = Number(this.price24);
+  if (!Number.isFinite(price) || price <= 0) {
+    this.refreshMessage = 'يرجى إدخال سعر صحيح أكبر من صفر.';
+    return;
+  }
+  if (price > 10000) {
+    this.refreshMessage = 'السعر المدخل مرتفع جدًا، يرجى التحقق منه.';
+    return;
+  }
+  this.price24 = Math.round(price * 1000) / 1000;
+  this.goldPrices = [24, 22, 21, 18].map(karat => ({
+    karat: String(karat),
+    price: Math.round((this.price24 * karat / 24) * 1000) / 1000,
+    change: 0
+  }));
+  try {
+    localStorage.setItem(
+      'oman-gold-manual-price-v1',
+      JSON.stringify({
+        price24: this.price24,
+        savedAt: Date.now(),
+        source: 'manual'
+      })
+      );
+    this.currentPriceUpdatedAt = null;
+    this.lastUpdated = null;
+    this.refreshMessage =
+      'مصدر السعر: إدخال يدوي. تم حفظه في المتصفح، ولا يمثل جلبًا مباشرًا من GoldAPI.';
+  } catch {
+    this.refreshMessage =
+      'تم تعديل الأسعار في الصفحة، لكن تعذر حفظها في المتصفح.';
+  }
+}
   private updateCardsFromHistory(data: GoldHistoryItem[]): void {
   if (data.length === 0) return;
 
@@ -205,173 +261,87 @@ private applyCurrentPrices(prices: GoldPrice[]): void {
 // ستظل البيانات المحفوظة متاحة في الجدول والرسم البياني.
 
 private loadHistoricalPrices(): void {
-  console.log('بدأت دالة تحميل السجل التاريخي');
-  
   const historyKey = 'oman-gold-history-v1';
-  const attemptKey = 'oman-gold-history-last-attempt-v1';
-  const updateInterval = 24 * 60 * 60 * 1000;
 
-  let savedAt = 0;
-  let lastAttempt = 0;
+  this.historyLoading = true;
+  this.historyError = '';
+
   let savedHistory: GoldHistoryItem[] = [];
 
+  // قراءة السجل السابق إن وُجد
   try {
     const raw = localStorage.getItem(historyKey);
 
     if (raw) {
       const saved = JSON.parse(raw);
-      savedAt = Number(saved.savedAt) || 0;
 
-      if (Array.isArray(saved.data)) {
-        savedHistory = saved.data;
-        console.log('السجلات التي قرأها التطبيق:', savedHistory.length);
-      }
+      savedHistory = Array.isArray(saved)
+        ? saved
+        : Array.isArray(saved.data)
+          ? saved.data
+          : [];
     }
-
-    lastAttempt = Number(
-      localStorage.getItem(attemptKey) ?? '0'
-    );
   } catch {
-    console.warn('تعذرت قراءة السجل التاريخي المحفوظ.');
+    savedHistory = [];
   }
- // دمج البيانات الأولية مع السجل المحفوظ
-  const seedMap = new Map<string, GoldHistoryItem>();
-
-  for (const item of GOLD_HISTORY_SEED) {
-    seedMap.set(item.date, item);
-  }
-
-  for (const item of savedHistory) {
-    seedMap.set(item.date, item);
-  }
-
-  savedHistory = Array.from(seedMap.values())
-    .sort((a, b) => a.date.localeCompare(b.date));
-    
-  // استعادة البيانات المحفوظة
-  {
-    this.history = savedHistory;
-    console.log('عدد السجلات المتاحة للعرض:', this.history.length);
-console.log('حالة التحميل قبل بدء الطلب:', this.historyLoading);
-  }
-
-  // عدم إعادة الطلب إذا كان السجل حديثًا
-  if (
-    savedHistory.length >= 30 &&
-    savedAt > 0 &&
-    Date.now() - savedAt < updateInterval
-  ) {
-    this.historyLoading = false;
-    return;
-  }
-
-  console.log('وقت آخر محاولة:', lastAttempt);
-console.log(
-  'عدد الساعات منذ آخر محاولة:',
-  lastAttempt > 0
-    ? ((Date.now() - lastAttempt) / (60 * 60 * 1000)).toFixed(2)
-    : 'لا توجد محاولة سابقة'
-);
-
-  // منع تكرار الطلبات خلال 24 ساعة
-  if (
-    lastAttempt > 0 &&
-    Date.now() - lastAttempt < updateInterval
-  ) {
-     console.log(
-    'لم يُرسل طلب جديد؛ ما زلنا ضمن فترة الانتظار البالغة 24 ساعة.'
-  );
-    this.historyLoading = false;
-    
-    return;
-  }
-
-  try {
-    localStorage.setItem(attemptKey, String(Date.now()));
-  } catch {
-    console.warn('تعذر حفظ وقت محاولة التحديث.');
-  }
-
-  this.historyLoading = true;
-  this.historyError = '';
-
-  const existingDates = savedHistory.map((item) => item.date);
-console.log('التواريخ المحفوظة:', existingDates);
-console.log('عدد التواريخ المحفوظة:', existingDates.length);
-console.log('وقت آخر محاولة:', new Date(lastAttempt).toLocaleString('ar-OM'));
-console.log(
-  'هل ما زلنا ضمن فترة الانتظار؟',
-  lastAttempt > 0 &&
-  Date.now() - lastAttempt < updateInterval
-);
-
+  // نستخدم XAUS فقط، وليس GoldAPI
   this.goldPriceService
-    .getHistoricalPrices(30, existingDates, 2)
-    .pipe(timeout({ first: 30000 }))
+    .getHistoricalPrices(30, [], 1)
+    .pipe(timeout({ first: 15000}))
     .subscribe({
-      next: (items) => {
-        const merged = new Map<string, GoldHistoryItem>();
-        if (items.length === 0) {
-  console.warn('لم تصل بيانات تاريخية جديدة؛ سنحتفظ بالسجل المحفوظ.');
-  this.historyLoading = false;
-  this.historyError =
-    'لم تصل بيانات تاريخية جديدة. نعرض السجل المحفوظ.';
-  return;
-}
-
+      next: (items: GoldHistoryItem[]) => {
+      const historyMap = new Map<string, GoldHistoryItem>();
+      // السجل التمهيدي
+      for (const item of GOLD_HISTORY_SEED) {
+      historyMap.set(item.date, item);
+         }
+        // السجل المحفوظ سابقًا
         for (const item of savedHistory) {
-          merged.set(item.date, item);
+          historyMap.set(item.date, item);
         }
 
+        // الأسعار الجديدة من XAUS لها الأولوية
         for (const item of items) {
-          merged.set(item.date, item);
+          historyMap.set(item.date, item);
         }
 
-        const combined = Array.from(merged.values())
+        this.history = Array.from(historyMap.values())
           .sort((a, b) => a.date.localeCompare(b.date));
-
-        this.history = combined;
-
-        console.log('عدد السجلات التاريخية:', combined.length);
-console.log('عدد النتائج الجديدة:', items.length);
-
-
-        if (!this.hasCurrentPrice && combined.length > 0) {
-          this.updateCardsFromHistory(combined);
-        }
 
         try {
           localStorage.setItem(
             historyKey,
             JSON.stringify({
               savedAt: Date.now(),
-              data: combined
+              data: this.history
             })
           );
-        } catch {
-          console.warn('تعذر حفظ السجل التاريخي.');
+        } catch (error) {
+          console.warn('تعذر حفظ سجل الأسعار محليًا:', error);
         }
-
-        this.historyError =
-          combined.length < 30
-            ? `لدينا ${combined.length} يومًا من البيانات الحقيقية؛ سيُستكمل السجل تدريجيًا.`
-            : '';
 
         this.historyLoading = false;
 
-        console.log('عدد السجلات التاريخية:', combined.length);
-        console.log('عدد النتائج الجديدة:', items.length);
+        if (items.length === 0) {
+          this.historyError =
+            'تعذر جلب السجل من المصدر الجديد. نعرض البيانات المحفوظة إن وجدت.';
+        } else {
+          this.historyError =
+            'ملاحظة: قد يتكرر آخر سعر إغلاق متاح في أيام توقف السوق.';
+        }
       },
 
       error: (error) => {
-        console.error('تعذر تحميل السجل التاريخي:', error);
 
-        this.historyError =
-          this.history.length > 0
-            ? 'تعذر تحديث السجل؛ نعرض البيانات المحفوظة.'
-            : 'تعذر تحميل أسعار الذهب التاريخية.';
+        this.history = savedHistory.length > 0
+          ? savedHistory
+          : GOLD_HISTORY_SEED;
 
         this.historyLoading = false;
+
+
+        this.historyError =
+          'تعذر تحديث السجل الآن. نعرض البيانات المحفوظة إن وجدت.';
       }
     });
 }
@@ -385,6 +355,48 @@ const updateInterval = 24 * 60 * 60 * 1000;
 
 // منع تكرار المحاولة الفاشلة خلال 24 دقيقة
 const attemptCooldown = 24 * 60 * 60 * 1000;
+let hasManualPrice = false;
+// قراءة السعر اليدوي المحفوظ دون الاتصال بالإنترنت
+  try {
+    const rawManual = localStorage.getItem(
+      'oman-gold-manual-price-v1'
+    );
+
+    if (rawManual) {
+      const manual = JSON.parse(rawManual);
+      const manualPrice = Number(manual.price24);
+
+      if (
+        manual.source === 'manual' &&
+        Number.isFinite(manualPrice) &&
+        manualPrice > 0 &&
+        manualPrice <= 10000
+      ) {
+        hasManualPrice = true;
+        this.price24 = manualPrice;
+
+        this.goldPrices = [24, 22, 21, 18].map(karat => ({
+          karat: String(karat),
+          price: Math.round(
+            (manualPrice * karat / 24) * 1000
+          ) / 1000,
+          change: 0
+        }));
+
+        this.currentPriceUpdatedAt = null;
+        this.lastUpdated = null;
+        this.hasCurrentPrice = true;
+
+        this.refreshMessage =
+  'مصدر السعر: إدخال يدوي محفوظ في هذا المتصفح. لم يتم جلب سعر مباشر من GoldAPI، وقد لا يعكس السعر المعروض سعر السوق اليوم.';
+
+        this.isRefreshing = false;
+        // لا نخرج من ngOnInit؛ نتابع تحميل السجل التاريخي
+      }
+    }
+  } catch {
+    console.warn('تعذرت قراءة السعر اليدوي المحفوظ.');
+  }
 
     // 1. قراءة السجل التاريخي ودمجه مع البيانات الأولية
   let savedHistory: GoldHistoryItem[] = [];
@@ -424,9 +436,12 @@ const attemptCooldown = 24 * 60 * 60 * 1000;
     this.lastUpdated = new Date(historySavedAt);
   }
 
-  if (this.history.length > 0) {
-    this.updateCardsFromHistory(this.history);
-  }
+  if (this.history.length > 0 && !hasManualPrice) {
+  this.updateCardsFromHistory(this.history);
+
+  this.refreshMessage =
+    'مصدر السعر: أحدث سجل تاريخي متاح. قد لا يعكس السعر المعروض سعر السوق اليوم.';
+}
 
   this.loadHistoricalPrices();
 
@@ -448,24 +463,23 @@ const attemptCooldown = 24 * 60 * 60 * 1000;
         );
 
       if (
-        typeof saved.savedAt === 'number' &&
-        validPrices
-      ) {
-        currentSavedAt = saved.savedAt;
-        this.currentPriceUpdatedAt = new Date(saved.savedAt);
-        this.hasCurrentPrice = true;
-        this.applyCurrentPrices(saved.data);
-      }
+  typeof saved.savedAt === 'number' &&
+  validPrices &&
+  !hasManualPrice
+) {
+  currentSavedAt = saved.savedAt;
+  this.currentPriceUpdatedAt = new Date(saved.savedAt);
+  this.hasCurrentPrice = true;
+  this.applyCurrentPrices(saved.data);
+}
     }
   } catch {
     console.warn('تعذرت قراءة السعر الحالي المحفوظ.');
   }
 
-  // 3. إذا كان السعر الحالي حديثًا، لا نرسل طلبًا جديدًا
-  if (
-    currentSavedAt > 0 &&
-    Date.now() - currentSavedAt < updateInterval
-  ) {
+   // 3 لا نطلب GoldAPI إذا كان هناك سعر يدوي محفوظ
+  if (hasManualPrice) {
+    this.isRefreshing = false;
     return;
   }
 
@@ -499,7 +513,7 @@ try {
 }
 
     // متابعة العمل إذا تعذر التخزين
-  
+
 
   // 6. طلب السعر الحالي فقط، دون إعادة طلب الأيام السبعة
 

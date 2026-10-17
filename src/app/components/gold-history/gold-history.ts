@@ -2,6 +2,7 @@ import { Component, Input } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { GoldHistoryItem } from '../../services/gold-price';
 
+
 interface GoldHistoryDisplayRow {
 date: string;
 price24: number | null;
@@ -19,9 +20,12 @@ styleUrl: './gold-history.css'
 })
 export class GoldHistoryComponent {
 @Input() history: GoldHistoryItem[] = [];
-@Input() loading = false;
+@Input({ transform: (value: boolean) => {
+return value;
+}})
+loading = false;
+@Input() isLoading = false;
 @Input() errorMessage = '';
-
 get displayHistory(): GoldHistoryDisplayRow[] {
 // ربط كل سجل بتاريخِه الأصلي بصيغة YYYYMMDD
 const historyMap = new Map<string, GoldHistoryItem>();

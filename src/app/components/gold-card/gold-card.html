@@ -53,15 +53,8 @@
       [class.!bg-red-100]="isDown"
       [class.!text-red-700]="isDown"
     >
-      @if (isUp) {
-        ▲
-      } @else if (isDown) {
-        ▼
-      } @else {
-        ●
-      }
+    @if (isUp) {▲} @else if (isDown) {▼} @else {↔}
     </span>
-
     <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
       <span
         class="font-bold text-gray-600"

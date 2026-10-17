@@ -12,13 +12,20 @@
   />
 </div>
 
+<button
+  type="button"
+  (click)="saveManualGoldPrice()"
+  [disabled]="isRefreshing">
+  حفظ السعر اليدوي
+</button>
+
 <main class="dashboard" dir="rtl">
   <section class="welcome">
     <div>
       <h2>مرحبًا بك في لوحة الذهب</h2>
       <p>تابعي أسعار الذهب في سلطنة عُمان بسهولة.</p>
     </div>
-    
+
     <span class="currency-badge">
       العملة: الريال العُماني
     </span>
@@ -45,7 +52,7 @@
 
 <div class="lastUpdated" dir="rtl">
   <p *ngIf="currentPriceUpdatedAt; else noCurrentPriceTime">
-    وقت حفظ السعر الحالي:
+   وقت استلام البيانات من GoldAPI:
     <strong>
       {{ currentPriceUpdatedAt | date:'dd/MM/yyyy hh:mm a' }}
     </strong>
@@ -53,7 +60,7 @@
 
   <ng-template #noCurrentPriceTime>
   <p>
-    وقت جلب السعر الحالي غير مسجل.
+   لم يُسجّل وقت استلام البيانات من GoldAPI.
     الأسعار المعروضة قد تكون بيانات محفوظة أو أولية، وليست بالضرورة أسعار اليوم.
   </p>
 </ng-template>
@@ -76,7 +83,6 @@
   @if (historyError) {
     <p class="history-error">{{ historyError }}</p>
   }
-
   @if (history.length > 0) {
     <app-gold-chart
       [history]="history">
@@ -84,25 +90,20 @@
   }
   <app-gold-history
   [history]="history"
-  [loading]="historyLoading"
+  [isLoading]="historyLoading"
   [errorMessage]="historyError">
 </app-gold-history>
 
   <app-gold-calculator
   [goldPrices]="goldPrices">
 </app-gold-calculator>
-  
 
   <section class="notice">
     <strong>تنبيه:</strong>
     الأسعار التاريخية تقديرية بحسب البيانات المتاحة، وأسعار العيارات
     محسوبة من سعر عيار 24 ولا تشمل المصنعية أو الضرائب.
   </section>
-
-  
 <div class="site-footer">
   <p>جميع الحقوق محفوظة &copy;2026</p>
 </div>
-
- 
 </main>

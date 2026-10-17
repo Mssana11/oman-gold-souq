@@ -1,18 +1,11 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import {
   Observable,
-  forkJoin,
-  map,
-  catchError,
   of,
-  mergeMap,
-  toArray,
   from,
-  throwError
+  map,
+  catchError
 } from 'rxjs';
-
-import { GOLD_API_KEY, GOLD_API_URL } from './gold-api.config';
 
 export interface GoldPrice {
   karat: string;
@@ -29,149 +22,106 @@ export interface GoldHistoryItem {
   change24?: number;
 }
 
-interface GoldApiResponse {
-  timestamp?: number;
-  date?: string;
-  price?: number;
-  metal?: string;
-  currency?: string;
-  [key: string]: unknown;
+interface XausHistoryResponse {
+  points: {
+    d: string;
+    c: number;
+  }[];
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class GoldPriceService {
-  private readonly headers = {
-    'x-access-token': GOLD_API_KEY
-  };
 
-  constructor(private http: HttpClient) {}
-
-  // جلب أسعار الذهب الحالية
+  // لا نطلب سعرًا حاليًا من GoldAPI.
+  // ستعتمد لوحة التحكم على البيانات المحفوظة إن توفرت.
   getGoldPrices(): Observable<GoldPrice[]> {
-  return this.http
-    .get<GoldApiResponse>(
-      `${GOLD_API_URL}/price/XAU/OMR`,
-      { headers: this.headers }
-    )
-    .pipe(
-      map((response) => {
-        const gramPrice = Number(response['price_gram_24k']);
-        const ouncePrice = Number(response['price']);
+    return of([]);
+  }
 
-        const price24 =
-          Number.isFinite(gramPrice) && gramPrice > 0
-            ? gramPrice
-            : Number.isFinite(ouncePrice) && ouncePrice > 0
-              ? ouncePrice / 31.1034768
-              : 0;
-
-        if (price24 <= 0) {
-          throw new Error('لم يصل سعر صالح للذهب من GoldAPI.');
-        }
-
-        return [24, 22, 21, 18].map((karat) => ({
-          karat: String(karat),
-          price: price24 * karat / 24,
-          change: 0
-        }));
-      }),
-      catchError((error) => {
-        console.error('تفاصيل خطأ GoldAPI:', {
-          status: error.status,
-          statusText: error.statusText,
-          message: error.message,
-          error: error.error
-        });
-
-        return throwError(() => error);
-      })
-    );
-}
-
-   // جلب التواريخ المفقودة على دفعات صغيرة لتوفير رصيد API
+  // جلب السجل التاريخي من XAUS
   getHistoricalPrices(
     days = 30,
-    existingDates: string[] = [],
-    maxRequests = 3
+    _existingDates: string[] = [],
+    _maxRequests = 3
   ): Observable<GoldHistoryItem[]> {
-    const existing = new Set(existingDates);
-    const missingDates: string[] = [];
+    const historyUrl = 'https://xaus.com/api/v1/history';
+    const ounceToGram = 31.1034768;
+    const usdToOmr = 0.3845;
 
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date();
-      date.setHours(12, 0, 0, 0);
-      date.setDate(date.getDate() - i);
+    return from(
+      fetch(historyUrl, {
+        signal: AbortSignal.timeout(20000)
+      }).then((response) => {
+        if (!response.ok) {
+          throw new Error(`XAUS HTTP ${response.status}`);
+        }
 
-      const dateKey =
-        `${date.getFullYear()}` +
-        `${String(date.getMonth() + 1).padStart(2, '0')}` +
-        `${String(date.getDate()).padStart(2, '0')}`;
-
-      if (!existing.has(dateKey)) {
-        missingDates.push(dateKey);
-      }
-    }
-
-    const datesToFetch = missingDates.slice(
-      0,
-      Math.max(0, Math.floor(maxRequests))
-    );
-
-    const requests: Observable<GoldHistoryItem | null>[] =
-      datesToFetch.map((dateKey) =>
-        this.http
-          .get<GoldApiResponse>(
-            `${GOLD_API_URL}/XAU/OMR/${dateKey}`,
-            { headers: this.headers }
-          )
-          .pipe(
-            map((response): GoldHistoryItem | null => {
-              const gram = Number(response['price_gram_24k']);
-              const ounce = Number(response['price']);
-
-              const price24 =
-                Number.isFinite(gram) && gram > 0
-                  ? gram
-                  : Number.isFinite(ounce) && ounce > 0
-                    ? ounce / 31.1034768
-                    : 0;
-
-              if (price24 <= 0) {
-                return null;
-              }
-
-              return {
-                date: dateKey,
-                price24,
-                price22: price24 * 22 / 24,
-                price21: price24 * 21 / 24,
-                price18: price24 * 18 / 24
-              };
-            }),
-            catchError((error) => {
-              console.warn(
-                'فشل طلب السجل التاريخي:',
-                dateKey,
-                error.status,
-                error.message
-              );
-              return of(null);
-            })
-          )
-      );
-
-    return from(requests).pipe(
-      mergeMap((request) => request, 2),
-      toArray(),
-      map((results): GoldHistoryItem[] =>
-        results
+        return response.json() as Promise<XausHistoryResponse>;
+      })
+    ).pipe(
+      map((response): GoldHistoryItem[] => {
+        const points = (response.points ?? [])
           .filter(
-            (item): item is GoldHistoryItem => item !== null
+            (point) =>
+              /^\d{4}-\d{2}-\d{2}$/.test(point.d) &&
+              Number.isFinite(point.c) &&
+              point.c > 0
           )
-          .sort((a, b) => a.date.localeCompare(b.date))
-      )
+          .sort((a, b) => a.d.localeCompare(b.d));
+
+        const recentPoints = points.slice(-90);
+
+        if (recentPoints.length === 0) {
+          return [];
+        }
+
+        const rows: GoldHistoryItem[] = [];
+
+        for (let i = days - 1; i >= 0; i--) {
+          const date = new Date();
+          date.setHours(12, 0, 0, 0);
+          date.setDate(date.getDate() - i);
+
+          const isoDate =
+            `${date.getFullYear()}-` +
+            `${String(date.getMonth() + 1).padStart(2, '0')}-` +
+            `${String(date.getDate()).padStart(2, '0')}`;
+
+          let point:
+            XausHistoryResponse['points'][number] | undefined;
+
+          for (const candidate of recentPoints) {
+            if (candidate.d <= isoDate) {
+              point = candidate;
+            } else {
+              break;
+            }
+          }
+
+          if (!point) {
+            continue;
+          }
+
+          const price24 =
+            (point.c / ounceToGram) * usdToOmr;
+
+          rows.push({
+            date: isoDate.replace(/-/g, ''),
+            price24,
+            price22: price24 * 22 / 24,
+            price21: price24 * 21 / 24,
+            price18: price24 * 18 / 24
+          });
+        }
+
+        return rows;
+      }),
+      catchError((error) => {
+        console.error('تعذر جلب سجل XAUS:', error);
+        return of([]);
+      })
     );
   }
 }

@@ -4,18 +4,15 @@
       <h2>سجل أسعار الذهب</h2>
       <p>الأسعار التاريخية المتاحة خلال آخر 30 يومًا</p>
     </div>
-
     <span class="history-count">
       {{ history.length }} من 30 يومًا متوفر
     </span>
   </div>
-
-  @if (loading) {
+  @if (isLoading) {
     <div class="history-status">
       جارٍ تحميل الأسعار التاريخية...
     </div>
   }
-
   @if (errorMessage) {
     <div class="history-error">
       {{ errorMessage }}
